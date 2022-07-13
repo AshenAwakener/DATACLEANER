@@ -1,0 +1,99 @@
+import PySimpleGUI as sg
+import pandas as pd
+import csv,json
+from collections import OrderedDict
+
+def to_geojson():
+    li = []
+    with open('NewFile.csv', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            d = OrderedDict()
+            d['type'] = 'Feature'
+            d['geometry'] = {
+                'type': 'Point',
+                'coordinates': [float(row[':geolocation.0']), float(row[':geolocation.1'])]
+            }
+            d['properties'] = {
+                'surveyor:name': row['surveyor:name'],
+                'addr:street': row['addr:street'],
+                'addr:town': row['addr:town'],
+                'amenity': row['amenity'],
+                'building': row['building'],
+                'building:levels': row['building:levels'],
+                'building;material': row['building:material'],
+                'capacity:persons': row['capacity:persons'],
+                'elevator': row['elevator'],
+                'emergency:amenity': row['emergency:amenity'],
+                'emergency:hazard:type': row['emergency:hazard:type'],
+                'emergency:social:facility': row['emergency:social:facility'],
+                'floor:material': row['floor:material'],
+                'isced:level': row['isced:level'],
+                'roof:material': row['roof:material'],
+                'social:facility:for': row['social:facility:for']
+            }
+            d['source'] = row['source']
+            d['source:name'] = row['source:name']
+            d['survey:date:today'] = row['survey:date:today']
+            d['water:source'] = row['water:source']
+            d['wheelchair'] = row['wheelchair']
+            li.append(d)
+
+    d = OrderedDict()
+    d['type'] = 'FeatureCollection'
+    d['name'] = row['name']
+    d['features'] = li
+
+    with open('output.json','w') as f:
+        json.dump(d,f,indent=2)
+
+def delete_col():
+    data.drop(['__version__','_status','_submission_time','_submitted_by','_uuid','_xform_id_string','formhub/uuid','meta/instanceID','point'], inplace=True, axis=1)
+    data.drop(list(data.filter(regex = "_attachments")), axis = 1, inplace = True)
+
+def check_capital(df):
+    i = 0 
+    data.columns = data.columns.str.replace("_",":")
+    for column_name in df[['addr:street','addr:town','name']]:
+        i=0
+        column_all = df[column_name]
+        for column_value in column_all:
+            print(str(column_value) + " Before")
+            column_all[i] = str(column_value).title()
+            print(str(column_all[i]) + " After")
+            i = i+1
+        df[column_name] = column_all
+    return(df)
+
+sg.theme('DarkAmber')
+
+layout = [  [sg.Text('Data Cleaner')],
+            [sg.Text('Enter filename'), sg.InputText()],
+            [sg.Button('Submit'), sg.Exit()]],
+
+window = sg.Window('Data Cleaning Software', layout)
+
+event, values = window.Read()
+if event in (None, 'Exit'):
+    exit()
+
+try:
+    data = pd.read_csv(values[0])
+except OSError as e:
+    print(e)
+    sg.popup("FILE DOES NOT EXIST!")
+    exit()
+    
+delete_col()
+data = check_capital(data)
+#rename_col()
+  
+if not data.empty:
+    data.to_csv('NewFile.csv',index=False)
+    to_geojson()
+else:
+    print("No data")
+#print(data)
+sg.popup("Data successfully cleaned")
+
+window.close()
