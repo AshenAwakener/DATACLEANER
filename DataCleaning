@@ -1,0 +1,50 @@
+import PySimpleGUI as sg
+import pandas as pd
+
+def fix_col():
+    data.drop(['__version__','_status','_submission_time','_submitted_by','_uuid','_xform_id_string','formhub/uuid','meta/instanceID','point'], inplace=True, axis=1)
+    data.drop(list(data.filter(regex = "_attachments")), axis = 1, inplace = True)
+    data.columns = data.columns.str.replace('_material', ';material')
+    data.columns = data.columns.str.replace("_",":")
+
+def check_capital(df):
+    i = 0 
+    for column_name in df[['addr:street','addr:town','name']]:
+        i=0
+        column_all = df[column_name]
+        for column_value in column_all:
+            column_all[i] = str(column_value).title()
+            i = i+1
+        df[column_name] = column_all
+    return(df)
+
+sg.theme('DarkAmber')
+
+layout = [  [sg.Text('Data Cleaner')],
+            [sg.Text('Enter filename'), sg.InputText()],
+            [sg.Button('Submit'), sg.Exit()]],
+
+window = sg.Window('Data Cleaning Software', layout)
+
+event, values = window.Read()
+if event in (None, 'Exit'):
+    exit()
+
+try:
+    data = pd.read_csv(values[0])
+except OSError as e:
+    print(e)
+    sg.popup("FILE DOES NOT EXIST!")
+    exit()
+    
+fix_col()
+data = check_capital(data)
+  
+if not data.empty:
+    data.to_csv('NewFile.csv',index=False)
+else:
+    print("No data")
+
+sg.popup("Data successfully cleaned")
+
+window.close()
